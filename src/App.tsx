@@ -170,8 +170,10 @@ const App: React.FC = () => {
   };
 
   const handleActivityAdd = (dayId: string) => {
+    // 強化 ID 生成：使用時間戳 + 隨機數，確保快速點擊時不會重複
+    const newId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const newActivity: Activity = {
-      id: Date.now().toString(),
+      id: newId,
       time: '待定',
       title: '新行程',
       description: '',
@@ -252,8 +254,9 @@ const App: React.FC = () => {
 
   const addShopItem = () => {
     if (!newItemName.trim()) return;
+    const newId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const newItem: ShoppingItem = {
-      id: Date.now().toString(),
+      id: newId,
       name: newItemName,
       checked: false,
       owner: selectedShopper,
@@ -291,8 +294,9 @@ const App: React.FC = () => {
 
   const addPackItem = () => {
     if (!newPackItem.trim()) return;
+    const newId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const newItem: PackingItem = {
-      id: Date.now().toString(),
+      id: newId,
       name: newPackItem.trim(),
       checked: false,
       owner: selectedPacker
@@ -330,7 +334,7 @@ const App: React.FC = () => {
       ? Math.round(amountVal * currentRate) 
       : Math.round(amountVal);
     const newExpense: ExpenseItem = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       name: expName,
       originalAmount: amountVal,
       currency: expCurrency,
@@ -719,8 +723,9 @@ const App: React.FC = () => {
                          <span className="text-[10px] text-stone-400 mr-1">數量</span>
                          <input 
                            type="number" 
-                           value={item.quantity || 1}
-                           onChange={(e) => updateShopItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                           defaultValue={item.quantity || 1}
+                           // 改用 onBlur 存檔，避免輸入時被同步蓋掉
+                           onBlur={(e) => updateShopItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                            className="w-8 text-center bg-transparent text-xs font-bold text-stone-700 outline-none"
                          />
                       </div>
@@ -728,8 +733,9 @@ const App: React.FC = () => {
                          <span className="text-[10px] text-stone-400 mr-1">單價 ¥</span>
                          <input 
                            type="number" 
-                           value={item.price || ''}
-                           onChange={(e) => updateShopItem(item.id, 'price', parseInt(e.target.value))}
+                           defaultValue={item.price || ''}
+                           // 改用 onBlur 存檔
+                           onBlur={(e) => updateShopItem(item.id, 'price', parseInt(e.target.value))}
                            placeholder="0"
                            className="w-full bg-transparent text-xs font-mono font-bold text-stone-700 outline-none"
                          />
@@ -739,8 +745,9 @@ const App: React.FC = () => {
                   <div className="mt-2 pl-8 pt-2 border-t border-stone-100 flex items-center">
                      <StickyNote size={12} className="text-stone-300 mr-2 flex-shrink-0" />
                      <input 
-                       value={item.note || ''}
-                       onChange={(e) => updateShopItem(item.id, 'note', e.target.value)}
+                       defaultValue={item.note || ''}
+                       // 改用 onBlur 存檔
+                       onBlur={(e) => updateShopItem(item.id, 'note', e.target.value)}
                        placeholder="備註 (規格、顏色...)"
                        className="w-full bg-transparent text-xs text-stone-600 outline-none placeholder:text-stone-300"
                      />

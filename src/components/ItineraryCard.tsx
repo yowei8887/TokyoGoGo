@@ -15,7 +15,8 @@ import {
   Edit2,
   Check,
   RefreshCw,
-  GripVertical
+  GripVertical,
+  X
 } from 'lucide-react';
 import { getWeatherPrediction } from '../services/geminiService';
 
@@ -38,6 +39,9 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
 }) => {
   const [weather, setWeather] = useState<string>(item.weather || "讀取中...");
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  // 新增：暫存編輯中的活動資料，避免直接修改 props 導致的同步衝突
+  const [tempActivity, setTempActivity] = useState<Activity | null>(null);
+  
   const [isRefreshingWeather, setIsRefreshingWeather] = useState(false);
   const [draggedActivityIndex, setDraggedActivityIndex] = useState<number | null>(null);
 
@@ -122,6 +126,25 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
     setDraggedActivityIndex(null);
   };
 
+  // Edit Handlers
+  const startEditing = (activity: Activity) => {
+    setEditingActivityId(activity.id);
+    setTempActivity({ ...activity }); // 複製一份到暫存
+  };
+
+  const saveEditing = () => {
+    if (tempActivity) {
+      onActivityUpdate(item.id, tempActivity.id, tempActivity);
+    }
+    setEditingActivityId(null);
+    setTempActivity(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingActivityId(null);
+    setTempActivity(null);
+  };
+
   return (
     <div className="h-full overflow-y-auto p-5 no-scrollbar pb-32 bg-[#f7f5f3] relative">
       
@@ -176,19 +199,19 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
                   </div>
               )}
 
-              {editingActivityId === activity.id ? (
-                // EDIT MODE
+              {editingActivityId === activity.id && tempActivity ? (
+                // EDIT MODE (使用 tempActivity 操作)
                 <div className="space-y-3">
                   <div className="flex space-x-2">
                     <input 
-                      value={activity.time}
-                      onChange={(e) => onActivityUpdate(item.id, activity.id, { ...activity, time: e.target.value })}
+                      value={tempActivity.time}
+                      onChange={(e) => setTempActivity({ ...tempActivity, time: e.target.value })}
                       className="w-1/3 text-xs bg-stone-50 p-2 rounded-lg outline-none border border-stone-200 focus:border-stone-400 text-stone-700"
                       placeholder="時間"
                     />
                     <select 
-                      value={activity.type}
-                      onChange={(e) => onActivityUpdate(item.id, activity.id, { ...activity, type: e.target.value as ActivityType })}
+                      value={tempActivity.type}
+                      onChange={(e) => setTempActivity({ ...tempActivity, type: e.target.value as ActivityType })}
                       className="w-2/3 text-xs bg-stone-50 p-2 rounded-lg outline-none border border-stone-200 focus:border-stone-400 text-stone-700"
                     >
                       <option value="spot">景點</option>
@@ -199,28 +222,31 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
                     </select>
                   </div>
                   <input 
-                    value={activity.title}
-                    onChange={(e) => onActivityUpdate(item.id, activity.id, { ...activity, title: e.target.value })}
+                    value={tempActivity.title}
+                    onChange={(e) => setTempActivity({ ...tempActivity, title: e.target.value })}
                     className="w-full font-bold text-stone-700 bg-stone-50 p-2 rounded-lg outline-none border border-stone-200 focus:border-stone-400"
                     placeholder="標題"
                   />
                   <textarea 
-                    value={activity.description}
-                    onChange={(e) => onActivityUpdate(item.id, activity.id, { ...activity, description: e.target.value })}
+                    value={tempActivity.description}
+                    onChange={(e) => setTempActivity({ ...tempActivity, description: e.target.value })}
                     className="w-full text-sm text-stone-600 bg-stone-50 p-2 rounded-lg outline-none border border-stone-200 focus:border-stone-400"
                     rows={2}
                     placeholder="描述"
                   />
                   {/* Manual AI Note / Guide Input */}
                   <textarea 
-                    value={activity.aiNotes || ''}
-                    onChange={(e) => onActivityUpdate(item.id, activity.id, { ...activity, aiNotes: e.target.value })}
+                    value={tempActivity.aiNotes || ''}
+                    onChange={(e) => setTempActivity({ ...tempActivity, aiNotes: e.target.value })}
                     className="w-full text-xs text-[#8a7967] bg-[#f5f0e6] p-2 rounded-lg outline-none border border-[#e6dcc8] placeholder:text-[#d4c5b0]"
                     rows={2}
                     placeholder="攻略 / 筆記 (必吃、必買...)"
                   />
-                  <div className="flex justify-end pt-2">
-                     <button onClick={() => setEditingActivityId(null)} className="text-stone-600 p-1 bg-stone-100 rounded-lg hover:bg-stone-200">
+                  <div className="flex justify-end pt-2 space-x-2">
+                     <button onClick={cancelEditing} className="text-stone-400 p-1 bg-stone-50 rounded-lg hover:bg-stone-200 hover:text-stone-600">
+                       <X size={16} />
+                     </button>
+                     <button onClick={saveEditing} className="text-white p-1 bg-stone-500 rounded-lg hover:bg-stone-600 shadow-sm">
                        <Check size={16} />
                      </button>
                   </div>
@@ -238,7 +264,7 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
                     
                     {/* Actions */}
                     <div className="flex items-center space-x-1 z-10">
-                      <button onClick={() => setEditingActivityId(activity.id)} className="text-stone-400 hover:text-stone-600 p-1.5 hover:bg-stone-50 rounded-full transition-colors">
+                      <button onClick={() => startEditing(activity)} className="text-stone-400 hover:text-stone-600 p-1.5 hover:bg-stone-50 rounded-full transition-colors">
                         <Edit2 size={12} />
                       </button>
                       <button onClick={() => onActivityDelete(item.id, activity.id)} className="text-stone-400 hover:text-[#d96b6b] p-1.5 hover:bg-stone-50 rounded-full transition-colors">
