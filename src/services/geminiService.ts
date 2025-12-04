@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { ItineraryItem, Activity } from "../types";
 
-const apiKey = process.env.API_KEY || '';
+const apiKey = import.meta.env.VITE_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 export const getFoodSuggestions = async (item: ItineraryItem): Promise<string> => {
