@@ -4,9 +4,16 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // 設定為相對路徑，這樣部署到 GitHub Pages (https://user.github.io/repo/) 才能找到檔案
+  // GitHub Pages 部署需要相對路徑
   base: './',
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
   build: {
     outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
   }
 })
