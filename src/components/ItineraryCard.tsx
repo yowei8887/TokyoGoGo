@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ItineraryItem, Activity, ActivityType } from '../types';
 import { 
@@ -13,7 +14,8 @@ import {
   Navigation,
   Edit2,
   Check,
-  RefreshCw
+  RefreshCw,
+  GripVertical
 } from 'lucide-react';
 import { getWeatherPrediction } from '../services/geminiService';
 
@@ -23,6 +25,7 @@ interface ItineraryCardProps {
   onActivityUpdate: (dayId: string, activityId: string, activity: Activity) => void;
   onActivityAdd: (dayId: string) => void;
   onActivityDelete: (dayId: string, activityId: string) => void;
+  onActivitiesReorder?: (dayId: string, newActivities: Activity[]) => void;
 }
 
 const ItineraryCard: React.FC<ItineraryCardProps> = ({ 
@@ -30,11 +33,13 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
   onUpdate,
   onActivityUpdate,
   onActivityAdd,
-  onActivityDelete
+  onActivityDelete,
+  onActivitiesReorder
 }) => {
   const [weather, setWeather] = useState<string>(item.weather || "讀取中...");
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [isRefreshingWeather, setIsRefreshingWeather] = useState(false);
+  const [draggedActivityIndex, setDraggedActivityIndex] = useState<number | null>(null);
 
   const fetchWeather = async () => {
     setIsRefreshingWeather(true);
@@ -83,6 +88,40 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
     }
   };
 
+  // DnD Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (editingActivityId) {
+        e.preventDefault();
+        return;
+    }
+    setDraggedActivityIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Make transparent
+    e.currentTarget.classList.add('opacity-50');
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedActivityIndex(null);
+    e.currentTarget.classList.remove('opacity-50');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedActivityIndex === null || draggedActivityIndex === dropIndex) return;
+    
+    if (onActivitiesReorder) {
+        const newActivities = [...item.activities];
+        const [movedItem] = newActivities.splice(draggedActivityIndex, 1);
+        newActivities.splice(dropIndex, 0, movedItem);
+        onActivitiesReorder(item.id, newActivities);
+    }
+    setDraggedActivityIndex(null);
+  };
+
   return (
     <div className="h-full overflow-y-auto p-5 no-scrollbar pb-32 bg-[#f7f5f3] relative">
       
@@ -111,17 +150,32 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
         {/* Vertical Line */}
         <div className="absolute left-[27px] top-2 bottom-0 w-[2px] border-l-2 border-dashed border-stone-300" />
 
-        {item.activities.map((activity) => (
-          <div key={activity.id} className="relative flex items-start group">
+        {item.activities.map((activity, index) => (
+          <div 
+            key={activity.id} 
+            className={`relative flex items-start group transition-all duration-200 ${draggedActivityIndex === index ? 'opacity-40 scale-95' : ''}`}
+            draggable={!editingActivityId}
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, index)}
+          >
             
             {/* Timeline Icon */}
-            <div className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm mr-4 ${getActivityColor(activity.type)}`}>
+            <div className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm mr-4 ${getActivityColor(activity.type)} cursor-grab active:cursor-grabbing`}>
               {getActivityIcon(activity.type)}
             </div>
 
             {/* Content Card */}
             <div className="flex-1 bg-white p-4 rounded-xl shadow-sm border border-stone-200 hover:border-stone-300 transition-all relative">
               
+              {/* Drag Handle Indicator (Only in view mode) */}
+              {!editingActivityId && (
+                  <div className="absolute top-2 right-2 text-stone-200 cursor-grab active:cursor-grabbing p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <GripVertical size={14} />
+                  </div>
+              )}
+
               {editingActivityId === activity.id ? (
                 // EDIT MODE
                 <div className="space-y-3">
@@ -174,7 +228,7 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
               ) : (
                 // VIEW MODE
                 <>
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-2 pr-4">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold text-stone-500 tracking-wider mb-0.5 bg-stone-100 px-1.5 py-0.5 rounded w-fit">
                         {activity.time}

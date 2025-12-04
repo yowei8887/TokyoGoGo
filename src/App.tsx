@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { INITIAL_ITINERARY, INITIAL_EXPENSES, INITIAL_SHOPPING, FLIGHTS, HOTELS, MEMBERS, INITIAL_CATEGORIES, INITIAL_PACKING_LIST } from './constants';
 import { ItineraryItem, ExpenseItem, ShoppingItem, Tab, Activity, Currency, ExpenseCategory, Member, ShoppingOwner, PackingItem } from './types';
@@ -160,6 +161,14 @@ const App: React.FC = () => {
     syncToFirebase({ itinerary: newItinerary });
   };
 
+  const handleActivitiesReorder = (dayId: string, newActivities: Activity[]) => {
+    const newItinerary = itinerary.map(day => 
+        day.id === dayId ? { ...day, activities: newActivities } : day
+    );
+    setItinerary(newItinerary);
+    syncToFirebase({ itinerary: newItinerary });
+  };
+
   const handleActivityAdd = (dayId: string) => {
     const newActivity: Activity = {
       id: Date.now().toString(),
@@ -196,17 +205,30 @@ const App: React.FC = () => {
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     if (draggedDayIndex === null || draggedDayIndex === dropIndex) return;
+
+    // 1. Copy the current itinerary list
     const newItinerary = [...itinerary];
+
+    // 2. Capture the "Calendar Skeleton" (Dates & Labels) from the current state
+    const calendarSkeleton = itinerary.map(item => ({
+      date: item.date,
+      dayLabel: item.dayLabel
+    }));
+
+    // 3. Move the Content Item
     const [movedItem] = newItinerary.splice(draggedDayIndex, 1);
     newItinerary.splice(dropIndex, 0, movedItem);
+
+    // 4. Re-apply the Calendar Skeleton
     const finalItinerary = newItinerary.map((item, index) => {
-        const refItem = INITIAL_ITINERARY[index] || INITIAL_ITINERARY[INITIAL_ITINERARY.length - 1]; 
-        return {
-            ...item,
-            date: refItem.date,
-            dayLabel: refItem.dayLabel,
-        };
+      const skeleton = calendarSkeleton[index] || { date: item.date, dayLabel: item.dayLabel };
+      return {
+        ...item,
+        date: skeleton.date,
+        dayLabel: skeleton.dayLabel,
+      };
     });
+
     setItinerary(finalItinerary);
     syncToFirebase({ itinerary: finalItinerary });
     setDraggedDayIndex(null);
@@ -445,6 +467,7 @@ const App: React.FC = () => {
             onActivityUpdate={handleActivityUpdate}
             onActivityAdd={handleActivityAdd}
             onActivityDelete={handleActivityDelete}
+            onActivitiesReorder={handleActivitiesReorder}
           />
         </div>
       </div>
