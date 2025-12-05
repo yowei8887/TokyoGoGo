@@ -44,7 +44,7 @@ import {
 
 // Firebase imports
 import { db } from './services/firebase';
-import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const DOC_ID = "main_trip_v2"; 
 
@@ -86,6 +86,20 @@ const App: React.FC = () => {
   const [newPackItem, setNewPackItem] = useState('');
 
   // --- FIREBASE SYNC ---
+  // 核心功能：清洗資料，將 undefined 轉為 null，防止 Firebase 報錯
+  const cleanData = (data: any): any => {
+    if (Array.isArray(data)) {
+      return data.map(cleanData);
+    }
+    if (data !== null && typeof data === 'object') {
+      return Object.entries(data).reduce((acc, [key, value]) => {
+        acc[key] = value === undefined ? null : cleanData(value);
+        return acc;
+      }, {} as any);
+    }
+    return data;
+  };
+
   useEffect(() => {
     const tripRef = doc(db, "trips", DOC_ID);
 
@@ -109,14 +123,15 @@ const App: React.FC = () => {
         if (data.exchangeRate) setCurrentRate(data.exchangeRate);
         setStatus('connected');
       } else {
-        setDoc(tripRef, {
+        // 如果文件不存在，初始化
+        setDoc(tripRef, cleanData({
           itinerary: INITIAL_ITINERARY,
           shoppingList: INITIAL_SHOPPING,
           expenses: INITIAL_EXPENSES,
           categories: INITIAL_CATEGORIES,
           packingList: INITIAL_PACKING_LIST,
           exchangeRate: 0.22
-        }).then(() => setStatus('connected'));
+        })).then(() => setStatus('connected'));
       }
     }, (error) => {
       console.error("Firebase sync error:", error);
@@ -129,9 +144,16 @@ const App: React.FC = () => {
   const syncToFirebase = async (data: any) => {
     try {
       const tripRef = doc(db, "trips", DOC_ID);
-      await updateDoc(tripRef, data);
-    } catch (err) {
+      // 使用 setDoc + merge: true 取代 updateDoc
+      // 這能確保即使欄位不存在或 undefined 也不會導致整個寫入失敗
+      await setDoc(tripRef, cleanData(data), { merge: true });
+      setStatus('connected');
+    } catch (err: any) {
       console.error("Failed to sync", err);
+      setStatus('error');
+      if (err.code === 'permission-denied') {
+        alert("存檔失敗：權限不足。請檢查 Firebase Rules。");
+      }
     }
   };
 
@@ -170,7 +192,6 @@ const App: React.FC = () => {
   };
 
   const handleActivityAdd = (dayId: string) => {
-    // 強化 ID 生成：使用時間戳 + 隨機數，確保快速點擊時不會重複
     const newId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const newActivity: Activity = {
       id: newId,
@@ -178,7 +199,8 @@ const App: React.FC = () => {
       title: '新行程',
       description: '',
       type: 'spot',
-      tags: []
+      tags: [],
+      aiNotes: null as any // 顯式給 null
     };
     const newItinerary = itinerary.map(day => 
       day.id === dayId ? { ...day, activities: [...day.activities, newActivity] } : day
@@ -208,20 +230,15 @@ const App: React.FC = () => {
     e.preventDefault();
     if (draggedDayIndex === null || draggedDayIndex === dropIndex) return;
 
-    // 1. Copy the current itinerary list
     const newItinerary = [...itinerary];
-
-    // 2. Capture the "Calendar Skeleton" (Dates & Labels) from the current state
     const calendarSkeleton = itinerary.map(item => ({
       date: item.date,
       dayLabel: item.dayLabel
     }));
 
-    // 3. Move the Content Item
     const [movedItem] = newItinerary.splice(draggedDayIndex, 1);
     newItinerary.splice(dropIndex, 0, movedItem);
 
-    // 4. Re-apply the Calendar Skeleton
     const finalItinerary = newItinerary.map((item, index) => {
       const skeleton = calendarSkeleton[index] || { date: item.date, dayLabel: item.dayLabel };
       return {
@@ -261,7 +278,7 @@ const App: React.FC = () => {
       checked: false,
       owner: selectedShopper,
       quantity: 1,
-      price: undefined,
+      price: 0,
       note: ''
     };
     const newList = [...shoppingList, newItem];
@@ -398,7 +415,6 @@ const App: React.FC = () => {
   // Helper for Member Avatar (Morandi Palette)
   const MemberAvatar = ({ member, size = 32, active = false }: { member: string, size?: number, active?: boolean }) => {
      const isPin = member === 'Pin';
-     // Pin: Muted Latte/Sand, Yowei: Muted Dusty Rose
      const bgColor = isPin 
         ? (active ? 'bg-[#c5b5a2]' : 'bg-[#e8ded1]') 
         : (active ? 'bg-[#c9a7a7]' : 'bg-[#e2d2d2]');
@@ -412,8 +428,6 @@ const App: React.FC = () => {
        </div>
      );
   };
-
-  // --- RENDERERS ---
 
   const renderItinerary = () => {
     const selectedItem = itinerary.find(i => i.id === selectedDayId) || itinerary[0];
@@ -482,7 +496,6 @@ const App: React.FC = () => {
     const myPackList = packingList.filter(item => item.owner === selectedPacker);
     const completedCount = myPackList.filter(i => i.checked).length;
     const isPin = selectedPacker === 'Pin';
-    const activePackerColor = isPin ? 'bg-[#e8ded1] text-[#8a7967]' : 'bg-[#e2d2d2] text-[#8a6868]';
     const barColor = isPin ? 'bg-[#c5b5a2]' : 'bg-[#c9a7a7]';
 
     return (
@@ -724,7 +737,6 @@ const App: React.FC = () => {
                          <input 
                            type="number" 
                            defaultValue={item.quantity || 1}
-                           // 改用 onBlur 存檔，避免輸入時被同步蓋掉
                            onBlur={(e) => updateShopItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                            className="w-8 text-center bg-transparent text-xs font-bold text-stone-700 outline-none"
                          />
@@ -734,7 +746,6 @@ const App: React.FC = () => {
                          <input 
                            type="number" 
                            defaultValue={item.price || ''}
-                           // 改用 onBlur 存檔
                            onBlur={(e) => updateShopItem(item.id, 'price', parseInt(e.target.value))}
                            placeholder="0"
                            className="w-full bg-transparent text-xs font-mono font-bold text-stone-700 outline-none"
@@ -746,7 +757,6 @@ const App: React.FC = () => {
                      <StickyNote size={12} className="text-stone-300 mr-2 flex-shrink-0" />
                      <input 
                        defaultValue={item.note || ''}
-                       // 改用 onBlur 存檔
                        onBlur={(e) => updateShopItem(item.id, 'note', e.target.value)}
                        placeholder="備註 (規格、顏色...)"
                        className="w-full bg-transparent text-xs text-stone-600 outline-none placeholder:text-stone-300"

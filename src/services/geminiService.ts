@@ -1,12 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { ItineraryItem, Activity } from "../types";
 
-const apiKey = import.meta.env.VITE_API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getFoodSuggestions = async (item: ItineraryItem): Promise<string> => {
-  if (!apiKey) return "請設定 API Key";
-
   try {
     const prompt = `
       我正在規劃日本行程。
@@ -30,8 +27,6 @@ export const getFoodSuggestions = async (item: ItineraryItem): Promise<string> =
 };
 
 export const getWeatherPrediction = async (date: string, location: string): Promise<string> => {
-  if (!apiKey) return "API Key missing";
-
   try {
     // Simplified prompt for better stability
     const prompt = `
@@ -59,8 +54,6 @@ export const getWeatherPrediction = async (date: string, location: string): Prom
 };
 
 export const generateTourGuideInfo = async (item: ItineraryItem): Promise<string> => {
-  if (!apiKey) return "API Key missing";
-
   try {
     const prompt = `
       你是一位專業的日本導遊。請根據以下行程提供詳細的攻略資訊：
@@ -90,8 +83,6 @@ export const generateTourGuideInfo = async (item: ItineraryItem): Promise<string
 };
 
 export const generateActivityGuide = async (activity: Activity, date: string): Promise<string> => {
-  if (!apiKey) return "API Key missing";
-
   try {
     const prompt = `
       你是一個日本旅遊達人。

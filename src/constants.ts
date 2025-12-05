@@ -46,13 +46,40 @@ export const HOTELS: HotelInfo[] = [
   }
 ];
 
+// 定義完整的行李清單項目
+const PACKING_ITEMS_TEMPLATE = [
+  // 重要物品
+  "護照(含影本)", "國際駕照", "台灣駕照", "身分證", "信用卡", "日幣", 
+  "保險中英文", "機票紙本", "住宿憑證",
+  // 個人衣物
+  "免洗內褲", "衣服褲子", "防風外套", "羽絨外套", "遮陽帽 / 毛帽", 
+  "襪子", "涼鞋 / 登山鞋", "拖鞋",
+  // 衛生用品及藥物
+  "口罩", "酒精紙巾", "衛生紙 / 濕紙巾", "衛生棉、棉條", "B群", 
+  "驅異樂", "暈車藥", "腸胃藥", "急救包",
+  // 盥洗用品
+  "牙刷 / 牙膏", "毛巾", "洗面乳", "保養品", "髮品", "泳衣", "污衣袋",
+  // 電器相關
+  "充電線", "轉接頭", "行動電源", "腳架",
+  // 其它
+  "後背包", "水壺 / 保溫瓶", "行李秤(拆電池)", "頸枕 / 耳塞", 
+  "購物袋", "雨傘雨衣", "防曬乳", "太陽眼鏡", "暖暖包", "塑膠袋 / 夾鏈袋"
+];
+
+// 產生兩份清單，分別給 Pin 和 Yowei
 export const INITIAL_PACKING_LIST: PackingItem[] = [
-  { id: '1', name: '護照', checked: false, owner: 'Pin' },
-  { id: '2', name: '日幣 / 信用卡', checked: false, owner: 'Pin' },
-  { id: '3', name: '手機充電線', checked: false, owner: 'Pin' },
-  { id: '4', name: '護照', checked: false, owner: 'Yowei' },
-  { id: '5', name: '日幣 / 信用卡', checked: false, owner: 'Yowei' },
-  { id: '6', name: '化妝包 / 保養品', checked: false, owner: 'Yowei' },
+  ...PACKING_ITEMS_TEMPLATE.map((name, i) => ({
+    id: `pin_default_${i}`,
+    name,
+    checked: false,
+    owner: 'Pin' as const
+  })),
+  ...PACKING_ITEMS_TEMPLATE.map((name, i) => ({
+    id: `yowei_default_${i}`,
+    name,
+    checked: false,
+    owner: 'Yowei' as const
+  }))
 ];
 
 export const INITIAL_SHOPPING: ShoppingItem[] = [

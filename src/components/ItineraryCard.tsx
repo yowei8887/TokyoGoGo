@@ -39,7 +39,6 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
 }) => {
   const [weather, setWeather] = useState<string>(item.weather || "讀取中...");
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
-  // 新增：暫存編輯中的活動資料，避免直接修改 props 導致的同步衝突
   const [tempActivity, setTempActivity] = useState<Activity | null>(null);
   
   const [isRefreshingWeather, setIsRefreshingWeather] = useState(false);
@@ -100,13 +99,10 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
     }
     setDraggedActivityIndex(index);
     e.dataTransfer.effectAllowed = 'move';
-    // Make transparent
-    e.currentTarget.classList.add('opacity-50');
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedActivityIndex(null);
-    e.currentTarget.classList.remove('opacity-50');
   };
 
   const handleDragOver = (e: React.DragEvent) => {
