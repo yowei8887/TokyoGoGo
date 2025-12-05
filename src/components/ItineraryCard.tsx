@@ -15,7 +15,7 @@ import {
   Edit2,
   Check,
   RefreshCw,
-  GripVertical,
+  Grip,
   X
 } from 'lucide-react';
 import { getWeatherPrediction } from '../services/geminiService';
@@ -37,6 +37,11 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
   onActivityDelete,
   onActivitiesReorder
 }) => {
+  // Safety check to prevent crash if item is undefined
+  if (!item) {
+    return <div className="p-8 text-center text-stone-400">載入行程中...</div>;
+  }
+
   const [weather, setWeather] = useState<string>(item.weather || "讀取中...");
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [tempActivity, setTempActivity] = useState<Activity | null>(null);
@@ -191,7 +196,7 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({
               {/* Drag Handle Indicator (Only in view mode) */}
               {!editingActivityId && (
                   <div className="absolute top-2 right-2 text-stone-200 cursor-grab active:cursor-grabbing p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <GripVertical size={14} />
+                      <Grip size={14} />
                   </div>
               )}
 

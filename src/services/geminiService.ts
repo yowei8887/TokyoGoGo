@@ -1,10 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 import { ItineraryItem, Activity } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper function to safely get the AI instance
+// 這能避免如果 process.env 在某些環境未定義時導致整個 App 白畫面
+const getAI = () => {
+  const apiKey = process.env.API_KEY; 
+  if (!apiKey) {
+    console.warn("API Key not found");
+    throw new Error("API Key missing");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const getFoodSuggestions = async (item: ItineraryItem): Promise<string> => {
   try {
+    const ai = getAI();
     const prompt = `
       我正在規劃日本行程。
       日期: ${item.date}
@@ -28,7 +38,7 @@ export const getFoodSuggestions = async (item: ItineraryItem): Promise<string> =
 
 export const getWeatherPrediction = async (date: string, location: string): Promise<string> => {
   try {
-    // Simplified prompt for better stability
+    const ai = getAI();
     const prompt = `
       Predict the weather for: ${location}, Date: ${date}.
       Return ONLY a short string in Traditional Chinese like: "Condition, High°C / Low°C".
@@ -42,19 +52,19 @@ export const getWeatherPrediction = async (date: string, location: string): Prom
     });
 
     const text = response.text?.trim();
-    // Basic validation to check if it looks like weather data
     if (text && (text.includes("°C") || text.includes("晴") || text.includes("雨") || text.includes("雪") || text.includes("雲"))) {
       return text;
     }
     return "☁️ 資料更新中";
   } catch (error) {
     console.error("Weather Fetch Error", error);
-    return "☁️ 無法取得";
+    return "☁️";
   }
 };
 
 export const generateTourGuideInfo = async (item: ItineraryItem): Promise<string> => {
   try {
+    const ai = getAI();
     const prompt = `
       你是一位專業的日本導遊。請根據以下行程提供詳細的攻略資訊：
       
@@ -84,6 +94,7 @@ export const generateTourGuideInfo = async (item: ItineraryItem): Promise<string
 
 export const generateActivityGuide = async (activity: Activity, date: string): Promise<string> => {
   try {
+    const ai = getAI();
     const prompt = `
       你是一個日本旅遊達人。
       時間: ${date} ${activity.time}
@@ -106,6 +117,6 @@ export const generateActivityGuide = async (activity: Activity, date: string): P
 
     return response.text?.trim() || "";
   } catch (error) {
-    return "連線不穩，請稍後再試";
+    return "連線不穩";
   }
 };
