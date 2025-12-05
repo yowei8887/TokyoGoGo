@@ -14,8 +14,6 @@ import {
   Plane,
   Hotel,
   Plus,
-  Wifi,
-  WifiOff,
   RefreshCw,
   JapaneseYen,
   ArrowRightLeft,
@@ -37,9 +35,7 @@ import {
   List,
   PenLine,
   Dog,
-  Cat,
-  User,
-  Users
+  Cat
 } from 'lucide-react';
 
 // Firebase imports
@@ -86,13 +82,15 @@ const App: React.FC = () => {
   const [newPackItem, setNewPackItem] = useState('');
 
   // --- FIREBASE SYNC ---
-  // 核心功能：清洗資料，將 undefined 轉為 null，防止 Firebase 報錯
+  
+  // 核心修復：Firebase 不接受 undefined，必須將其轉為 null 或移除
   const cleanData = (data: any): any => {
     if (Array.isArray(data)) {
       return data.map(cleanData);
     }
     if (data !== null && typeof data === 'object') {
       return Object.entries(data).reduce((acc, [key, value]) => {
+        // 如果值是 undefined，轉為 null
         acc[key] = value === undefined ? null : cleanData(value);
         return acc;
       }, {} as any);
@@ -123,7 +121,7 @@ const App: React.FC = () => {
         if (data.exchangeRate) setCurrentRate(data.exchangeRate);
         setStatus('connected');
       } else {
-        // 如果文件不存在，初始化
+        // 初始化資料庫
         setDoc(tripRef, cleanData({
           itinerary: INITIAL_ITINERARY,
           shoppingList: INITIAL_SHOPPING,
@@ -136,6 +134,10 @@ const App: React.FC = () => {
     }, (error) => {
       console.error("Firebase sync error:", error);
       setStatus('error');
+      // 如果是權限錯誤，通常是因為 Firestore Rules 沒開
+      if (error.code === 'permission-denied') {
+          alert("讀取失敗：權限不足。請到 Firebase Console > Firestore Database > Rules 將 allow read, write 改為 true。");
+      }
     });
 
     return () => unsubscribe();
@@ -144,15 +146,16 @@ const App: React.FC = () => {
   const syncToFirebase = async (data: any) => {
     try {
       const tripRef = doc(db, "trips", DOC_ID);
-      // 使用 setDoc + merge: true 取代 updateDoc
-      // 這能確保即使欄位不存在或 undefined 也不會導致整個寫入失敗
+      // 使用 setDoc + merge: true，並經過 cleanData 處理
       await setDoc(tripRef, cleanData(data), { merge: true });
       setStatus('connected');
     } catch (err: any) {
       console.error("Failed to sync", err);
       setStatus('error');
       if (err.code === 'permission-denied') {
-        alert("存檔失敗：權限不足。請檢查 Firebase Rules。");
+        alert("存檔失敗：權限不足。請到 Firebase Console > Firestore Database > Rules 將 allow read, write 改為 true。");
+      } else {
+        alert(`存檔失敗：${err.message}`);
       }
     }
   };
@@ -428,6 +431,8 @@ const App: React.FC = () => {
        </div>
      );
   };
+
+  // --- RENDERERS ---
 
   const renderItinerary = () => {
     const selectedItem = itinerary.find(i => i.id === selectedDayId) || itinerary[0];
