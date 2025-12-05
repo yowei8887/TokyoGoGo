@@ -1,12 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { ItineraryItem, Activity } from "../types";
 
-// Helper function to safely get the AI instance
-// 這能避免如果 process.env 在某些環境未定義時導致整個 App 白畫面
+// Helper function: 安全地取得 AI 實例
+// 將初始化移到這裡，避免 App 啟動時因為 process.env 未定義而直接白畫面
 const getAI = () => {
   const apiKey = process.env.API_KEY; 
   if (!apiKey) {
-    console.warn("API Key not found");
+    console.warn("API Key not found. Please check your .env file.");
     throw new Error("API Key missing");
   }
   return new GoogleGenAI({ apiKey });
@@ -39,6 +39,7 @@ export const getFoodSuggestions = async (item: ItineraryItem): Promise<string> =
 export const getWeatherPrediction = async (date: string, location: string): Promise<string> => {
   try {
     const ai = getAI();
+    // Simplified prompt for better stability
     const prompt = `
       Predict the weather for: ${location}, Date: ${date}.
       Return ONLY a short string in Traditional Chinese like: "Condition, High°C / Low°C".
@@ -52,6 +53,7 @@ export const getWeatherPrediction = async (date: string, location: string): Prom
     });
 
     const text = response.text?.trim();
+    // Basic validation to check if it looks like weather data
     if (text && (text.includes("°C") || text.includes("晴") || text.includes("雨") || text.includes("雪") || text.includes("雲"))) {
       return text;
     }
