@@ -71,10 +71,13 @@ export interface HotelInfo {
   address?: string;
 }
 
+export type PackingCategory = '重要文件' | '衣物鞋帽' | '盥洗保養' | '藥品雜物' | '3C電器';
+
 export interface PackingItem {
   id: string;
   name: string;
   checked: boolean;
+  category: PackingCategory;
   owner: 'Pin' | 'Yowei';
 }
 

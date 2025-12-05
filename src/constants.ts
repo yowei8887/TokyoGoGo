@@ -1,5 +1,5 @@
 
-import { ItineraryItem, ShoppingItem, ExpenseItem, FlightInfo, HotelInfo, Member, ExpenseCategory, PackingItem } from './types';
+import { ItineraryItem, ShoppingItem, ExpenseItem, FlightInfo, HotelInfo, Member, ExpenseCategory, PackingItem, PackingCategory } from './types';
 
 // --- STICKER CONFIGURATION ---
 // 請在這裡填入您的圖片網址。建議使用去背的 PNG 檔案。
@@ -46,40 +46,50 @@ export const HOTELS: HotelInfo[] = [
   }
 ];
 
-// 定義完整的行李清單項目
-const PACKING_ITEMS_TEMPLATE = [
-  // 重要物品
-  "護照(含影本)", "國際駕照", "台灣駕照", "身分證", "信用卡", "日幣", 
-  "保險中英文", "機票紙本", "住宿憑證",
-  // 個人衣物
-  "免洗內褲", "衣服褲子", "防風外套", "羽絨外套", "遮陽帽 / 毛帽", 
-  "襪子", "涼鞋 / 登山鞋", "拖鞋",
-  // 衛生用品及藥物
-  "口罩", "酒精紙巾", "衛生紙 / 濕紙巾", "衛生棉、棉條", "B群", 
-  "驅異樂", "暈車藥", "腸胃藥", "急救包",
-  // 盥洗用品
-  "牙刷 / 牙膏", "毛巾", "洗面乳", "保養品", "髮品", "泳衣", "污衣袋",
-  // 電器相關
-  "充電線", "轉接頭", "行動電源", "腳架",
-  // 其它
-  "後背包", "水壺 / 保溫瓶", "行李秤(拆電池)", "頸枕 / 耳塞", 
-  "購物袋", "雨傘雨衣", "防曬乳", "太陽眼鏡", "暖暖包", "塑膠袋 / 夾鏈袋"
+// 定義分類與其對應的預設項目
+const PACKING_TEMPLATE: { category: PackingCategory; items: string[] }[] = [
+  {
+    category: '重要文件',
+    items: ["護照(含影本)", "國際駕照", "台灣駕照", "身分證", "信用卡 / 日幣", "保險單", "機票 / 住宿憑證"]
+  },
+  {
+    category: '衣物鞋帽',
+    items: ["免洗內褲", "換洗衣物", "防風 / 羽絨外套", "遮陽帽 / 毛帽", "襪子", "好走的鞋", "拖鞋"]
+  },
+  {
+    category: '盥洗保養',
+    items: ["牙刷 / 牙膏", "毛巾", "洗面乳 / 卸妝", "保養品 / 防曬", "髮品", "刮鬍刀", "隱形眼鏡"]
+  },
+  {
+    category: '藥品雜物',
+    items: ["口罩", "酒精紙巾", "衛生紙 / 濕紙巾", "個人藥品 / B群", "暈車藥 / 腸胃藥", "OK蹦", "雨傘 / 雨衣", "暖暖包", "塑膠袋"]
+  },
+  {
+    category: '3C電器',
+    items: ["手機充電線", "轉接頭", "行動電源", "網卡 / WiFi機", "相機 / 腳架", "行李秤"]
+  }
 ];
 
 // 產生兩份清單，分別給 Pin 和 Yowei
+const generateListForMember = (owner: 'Pin' | 'Yowei'): PackingItem[] => {
+  let list: PackingItem[] = [];
+  PACKING_TEMPLATE.forEach(group => {
+    group.items.forEach((itemName, index) => {
+      list.push({
+        id: `${owner.toLowerCase()}_${group.category}_${index}`,
+        name: itemName,
+        checked: false,
+        category: group.category,
+        owner: owner
+      });
+    });
+  });
+  return list;
+};
+
 export const INITIAL_PACKING_LIST: PackingItem[] = [
-  ...PACKING_ITEMS_TEMPLATE.map((name, i) => ({
-    id: `pin_default_${i}`,
-    name,
-    checked: false,
-    owner: 'Pin' as const
-  })),
-  ...PACKING_ITEMS_TEMPLATE.map((name, i) => ({
-    id: `yowei_default_${i}`,
-    name,
-    checked: false,
-    owner: 'Yowei' as const
-  }))
+  ...generateListForMember('Pin'),
+  ...generateListForMember('Yowei')
 ];
 
 export const INITIAL_SHOPPING: ShoppingItem[] = [
@@ -92,6 +102,7 @@ export const INITIAL_SHOPPING: ShoppingItem[] = [
 // Constants for Dropdowns
 export const MEMBERS: Member[] = ['Pin', 'Yowei'];
 export const INITIAL_CATEGORIES: ExpenseCategory[] = ['餵豬', '買快樂', '交通', '住宿', '雜支'];
+export const PACKING_CATEGORIES: PackingCategory[] = ['重要文件', '衣物鞋帽', '盥洗保養', '藥品雜物', '3C電器'];
 
 export const INITIAL_EXPENSES: ExpenseItem[] = [
   { 

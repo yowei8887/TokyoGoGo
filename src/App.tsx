@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { INITIAL_ITINERARY, INITIAL_EXPENSES, INITIAL_SHOPPING, FLIGHTS, HOTELS, MEMBERS, INITIAL_CATEGORIES, INITIAL_PACKING_LIST } from './constants';
-import { ItineraryItem, ExpenseItem, ShoppingItem, Tab, Activity, Currency, ExpenseCategory, Member, ShoppingOwner, PackingItem } from './types';
+import { INITIAL_ITINERARY, INITIAL_EXPENSES, INITIAL_SHOPPING, FLIGHTS, HOTELS, MEMBERS, INITIAL_CATEGORIES, INITIAL_PACKING_LIST, PACKING_CATEGORIES } from './constants';
+import { ItineraryItem, ExpenseItem, ShoppingItem, Tab, Activity, Currency, ExpenseCategory, Member, ShoppingOwner, PackingItem, PackingCategory } from './types';
 import ItineraryCard from './components/ItineraryCard';
 import { 
   Map, 
@@ -79,6 +79,7 @@ const App: React.FC = () => {
 
   // Packing List UI State
   const [selectedPacker, setSelectedPacker] = useState<'Pin' | 'Yowei'>('Pin');
+  const [activePackCategory, setActivePackCategory] = useState<PackingCategory>('重要文件');
   const [newPackItem, setNewPackItem] = useState('');
 
   // --- FIREBASE SYNC ---
@@ -319,6 +320,7 @@ const App: React.FC = () => {
       id: newId,
       name: newPackItem.trim(),
       checked: false,
+      category: activePackCategory,
       owner: selectedPacker
     };
     const newList = [...packingList, newItem];
@@ -498,10 +500,22 @@ const App: React.FC = () => {
   };
 
   const renderInfo = () => {
-    const myPackList = packingList.filter(item => item.owner === selectedPacker);
-    const completedCount = myPackList.filter(i => i.checked).length;
     const isPin = selectedPacker === 'Pin';
     const barColor = isPin ? 'bg-[#c5b5a2]' : 'bg-[#c9a7a7]';
+    const activeTabColor = isPin ? 'bg-[#c5b5a2] text-white' : 'bg-[#c9a7a7] text-white';
+
+    // 取得該成員的所有項目
+    const allMemberItems = packingList.filter(item => item.owner === selectedPacker);
+    // 根據目前選中的分類過濾顯示
+    const currentCategoryItems = allMemberItems.filter(item => item.category === activePackCategory);
+    
+    // 計算總進度 (所有類別)
+    const totalItems = allMemberItems.length;
+    const totalCompleted = allMemberItems.filter(i => i.checked).length;
+    
+    // 計算當前類別進度
+    const catItems = currentCategoryItems.length;
+    const catCompleted = currentCategoryItems.filter(i => i.checked).length;
 
     return (
     <div className="p-6 pb-24 space-y-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-y-auto h-full no-scrollbar bg-[#f7f5f3]">
@@ -587,6 +601,7 @@ const App: React.FC = () => {
         </h3>
         
         <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+           {/* Owner Switcher */}
            <div className="flex border-b border-stone-200">
               {(['Pin', 'Yowei'] as const).map(p => {
                  const isActive = selectedPacker === p;
@@ -604,43 +619,74 @@ const App: React.FC = () => {
               })}
            </div>
 
-           <div className="p-4 bg-stone-50">
-              <div className="flex justify-between text-xs mb-1.5 px-1">
-                 <span className="font-bold text-stone-500">完成度</span>
-                 <span className="font-bold text-stone-600">{myPackList.length > 0 ? Math.round((completedCount / myPackList.length) * 100) : 0}%</span>
-              </div>
-              <div className="h-2 w-full bg-stone-200 rounded-full overflow-hidden mb-4">
-                 <div 
-                   className={`h-full transition-all duration-500 ${barColor}`} 
-                   style={{ width: `${myPackList.length > 0 ? (completedCount / myPackList.length) * 100 : 0}%` }}
-                 />
-              </div>
-
-              <div className="flex gap-2 mb-4">
-                <input 
-                  value={newPackItem}
-                  onChange={(e) => setNewPackItem(e.target.value)}
-                  placeholder="新增行李項目..."
-                  className="flex-1 text-sm px-3 py-2 rounded-lg border border-stone-300 outline-none focus:border-stone-400 bg-white placeholder:text-stone-400"
-                  onKeyDown={(e) => e.key === 'Enter' && addPackItem()}
-                />
-                <button onClick={addPackItem} className={`px-3 py-2 rounded-lg text-white shadow-sm transition-colors ${barColor} hover:opacity-90`}>
-                  <Plus size={18} />
-                </button>
+           <div className="bg-stone-50">
+              {/* Overall Progress */}
+              <div className="p-4 pb-2 border-b border-stone-100">
+                  <div className="flex justify-between text-xs mb-1.5 px-1">
+                    <span className="font-bold text-stone-500">總完成度</span>
+                    <span className="font-bold text-stone-600">{totalItems > 0 ? Math.round((totalCompleted / totalItems) * 100) : 0}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-stone-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ${barColor}`} 
+                      style={{ width: `${totalItems > 0 ? (totalCompleted / totalItems) * 100 : 0}%` }}
+                    />
+                  </div>
               </div>
 
-              <div className="space-y-2">
-                 {myPackList.map(item => (
-                   <div key={item.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-stone-200 shadow-sm group hover:border-stone-300 transition-colors">
-                      <button onClick={() => togglePackItem(item.id)} className="flex items-center space-x-3 flex-1 text-left">
-                         {item.checked ? <CheckCircle2 className="text-[#a0b0a5]" size={18} /> : <Circle className="text-stone-300" size={18} />}
-                         <span className={`text-sm ${item.checked ? 'text-stone-400 line-through decoration-stone-300' : 'text-stone-700'}`}>{item.name}</span>
-                      </button>
-                      <button onClick={() => removePackItem(item.id)} className="text-stone-300 hover:text-[#d96b6b] p-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <Trash2 size={14} />
-                      </button>
-                   </div>
+              {/* Category Tabs */}
+              <div className="flex overflow-x-auto no-scrollbar gap-2 p-4 pb-2">
+                 {PACKING_CATEGORIES.map(cat => (
+                   <button
+                     key={cat}
+                     onClick={() => setActivePackCategory(cat)}
+                     className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                       activePackCategory === cat 
+                         ? activeTabColor + ' border-transparent shadow-sm'
+                         : 'bg-white text-stone-400 border-stone-200 hover:border-stone-300'
+                     }`}
+                   >
+                     {cat}
+                   </button>
                  ))}
+              </div>
+
+              {/* List Area */}
+              <div className="p-4 pt-2">
+                 {/* Input */}
+                 <div className="flex gap-2 mb-4">
+                    <input 
+                      value={newPackItem}
+                      onChange={(e) => setNewPackItem(e.target.value)}
+                      placeholder={`新增到 ${activePackCategory}...`}
+                      className="flex-1 text-sm px-3 py-2 rounded-lg border border-stone-300 outline-none focus:border-stone-400 bg-white placeholder:text-stone-400"
+                      onKeyDown={(e) => e.key === 'Enter' && addPackItem()}
+                    />
+                    <button onClick={addPackItem} className={`px-3 py-2 rounded-lg text-white shadow-sm transition-colors ${barColor} hover:opacity-90 flex-shrink-0`}>
+                      <Plus size={18} />
+                    </button>
+                 </div>
+                
+                 {/* Category Items */}
+                 <div className="space-y-2 min-h-[150px]">
+                    {currentCategoryItems.length === 0 ? (
+                        <div className="text-center py-8 text-stone-400 text-xs italic">
+                            這個分類還沒有項目
+                        </div>
+                    ) : (
+                        currentCategoryItems.map(item => (
+                        <div key={item.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-stone-200 shadow-sm group hover:border-stone-300 transition-colors animate-in fade-in slide-in-from-bottom-1 duration-200">
+                            <button onClick={() => togglePackItem(item.id)} className="flex items-center space-x-3 flex-1 text-left">
+                                {item.checked ? <CheckCircle2 className="text-[#a0b0a5]" size={18} /> : <Circle className="text-stone-300" size={18} />}
+                                <span className={`text-sm ${item.checked ? 'text-stone-400 line-through decoration-stone-300' : 'text-stone-700'}`}>{item.name}</span>
+                            </button>
+                            <button onClick={() => removePackItem(item.id)} className="text-stone-300 hover:text-[#d96b6b] p-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                        ))
+                    )}
+                 </div>
               </div>
            </div>
         </div>
