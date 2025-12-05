@@ -42,7 +42,7 @@ import {
 import { db } from './services/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
-const DOC_ID = "main_trip_v2"; 
+const DOC_ID = "main_trip_v3"; 
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.ITINERARY);
@@ -79,12 +79,11 @@ const App: React.FC = () => {
 
   // Packing List UI State
   const [selectedPacker, setSelectedPacker] = useState<'Pin' | 'Yowei'>('Pin');
-  const [activePackCategory, setActivePackCategory] = useState<PackingCategory>('重要文件');
+  const [activePackCategory, setActivePackCategory] = useState<PackingCategory>('重要物品');
   const [newPackItem, setNewPackItem] = useState('');
 
   // --- FIREBASE SYNC ---
   
-  // 核心修復：Firebase 不接受 undefined，必須將其轉為 null 或移除
   const cleanData = (data: any): any => {
     if (Array.isArray(data)) {
       return data.map(cleanData);
@@ -135,9 +134,8 @@ const App: React.FC = () => {
     }, (error) => {
       console.error("Firebase sync error:", error);
       setStatus('error');
-      // 如果是權限錯誤，通常是因為 Firestore Rules 沒開
       if (error.code === 'permission-denied') {
-          alert("讀取失敗：權限不足。請到 Firebase Console > Firestore Database > Rules 將 allow read, write 改為 true。");
+          alert("讀取失敗：權限不足。");
       }
     });
 
@@ -147,17 +145,11 @@ const App: React.FC = () => {
   const syncToFirebase = async (data: any) => {
     try {
       const tripRef = doc(db, "trips", DOC_ID);
-      // 使用 setDoc + merge: true，並經過 cleanData 處理
       await setDoc(tripRef, cleanData(data), { merge: true });
       setStatus('connected');
     } catch (err: any) {
       console.error("Failed to sync", err);
       setStatus('error');
-      if (err.code === 'permission-denied') {
-        alert("存檔失敗：權限不足。請到 Firebase Console > Firestore Database > Rules 將 allow read, write 改為 true。");
-      } else {
-        alert(`存檔失敗：${err.message}`);
-      }
     }
   };
 
@@ -204,7 +196,7 @@ const App: React.FC = () => {
       description: '',
       type: 'spot',
       tags: [],
-      aiNotes: null as any // 顯式給 null
+      aiNotes: null as any 
     };
     const newItinerary = itinerary.map(day => 
       day.id === dayId ? { ...day, activities: [...day.activities, newActivity] } : day
@@ -333,6 +325,13 @@ const App: React.FC = () => {
     const newList = packingList.filter(item => item.id !== id);
     setPackingList(newList);
     syncToFirebase({ packingList: newList });
+  };
+
+  const resetPackingList = () => {
+    if (confirm('確定要重置行李清單嗎？目前的勾選狀態和新增項目都會消失喔！')) {
+        setPackingList(INITIAL_PACKING_LIST);
+        syncToFirebase({ packingList: INITIAL_PACKING_LIST });
+    }
   };
 
   const handleAddCategory = () => {
@@ -596,9 +595,17 @@ const App: React.FC = () => {
       </section>
 
       <section>
-         <h3 className="flex items-center text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">
-          <Luggage className="mr-2" size={14} /> 行李清單
-        </h3>
+         <div className="flex items-center justify-between mb-4">
+            <h3 className="flex items-center text-xs font-bold text-stone-400 uppercase tracking-wider">
+               <Luggage className="mr-2" size={14} /> 行李清單
+            </h3>
+            <button 
+              onClick={resetPackingList}
+              className="text-[10px] text-stone-400 hover:text-stone-600 flex items-center bg-stone-100 px-2 py-1 rounded hover:bg-stone-200 transition-colors"
+            >
+              <RefreshCw size={10} className="mr-1" /> 重置預設
+            </button>
+         </div>
         
         <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
            {/* Owner Switcher */}

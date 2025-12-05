@@ -71,7 +71,8 @@ export interface HotelInfo {
   address?: string;
 }
 
-export type PackingCategory = '重要文件' | '衣物鞋帽' | '盥洗保養' | '藥品雜物' | '3C電器';
+// Updated Categories based on user request
+export type PackingCategory = '重要物品' | '衛生用品及藥物' | '電器相關' | '個人衣物' | '盥洗用品' | '其它';
 
 export interface PackingItem {
   id: string;
